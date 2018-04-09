@@ -1,67 +1,137 @@
-// Телефонная книга
-var phoneBook = {};
-
 /**
- * @param {String} command
- * @returns {*} - результат зависит от команды
+ * @param {String} dateStr
+ * @returns {Object}
  */
-module.exports = function (command) {
-    var args = command.split(' ');
+module.exports = function (dateStr) {
+    var monthNames = [
+        '01', '02', '03', '04',
+        '05', '06', '07', '08',
+        '09', '10', '11', '12'
+    ];
 
-    var operation = args[0];
+    var dateTime = new Date(dateStr);
 
-    if (operation.search(/ADD/) > -1) {
-        var contact = {
-            name: args[1],
-            phones: args[2].split(',')
-        };
+    dateTime
+        .setUTCHours(
+            Number(
+                String(
+                    String(
+                        dateStr.match(/\d\d:/)
+                    ).match(/\d\d/))
+            )
+        );
 
-        if (phoneBook[contact.name] == undefined) {
-            phoneBook[contact.name] = contact.phones;
+    var func = function (str) {
+        var minutes = Number(str.getUTCMinutes());
+        var strMinutes;
+        if (minutes < 10) {
+            strMinutes = '0'.concat(String(minutes));
         } else {
-            phoneBook[contact.name] = phoneBook[contact.name].concat(contact.phones);
+            strMinutes = String(minutes);
         }
-    }
 
-    if (operation.search(/SHOW/) > -1) {
-        var contacts = [];
-        for (var name in phoneBook) {
-            if (phoneBook[name].length > 0) {
-                var cont = {
-                    name: name,
-                    phones: phoneBook[name]
-                };
-                contacts.push(cont);
+        var hours = Number(str.getUTCHours());
+        var strHours;
+        if (hours < 10) {
+            strHours = '0'.concat(String(hours));
+        } else {
+            strHours = String(hours);
+        }
+
+        var days = Number(str.getUTCDate());
+        var strDays;
+        if (days < 10) {
+            strDays = '0'.concat(String(days));
+        } else {
+            strDays = String(days);
+        }
+
+        return String(str.getUTCFullYear())
+            .concat('-')
+            .concat(monthNames[str.getMonth()])
+            .concat('-')
+            .concat(strDays)
+            .concat(' ')
+            .concat(strHours)
+            .concat(':')
+            .concat(strMinutes);
+    };
+
+    var date = {
+        value: func(dateTime),
+        add: function (amount, unit) {
+            if (amount < 0) throw new TypeError();
+            if ('minutes'.match(new RegExp(unit))) {
+                var mins = dateTime.getMinutes();
+                dateTime.setMinutes(mins + amount);
+                this.value = func(dateTime);
+                return this;
             }
-        }
-
-        contacts.sort(function (a, b) {
-            if (a.name < b.name) return -1;
-            if (a.name > b.name) return 1;
-            return 0;
-        });
-
-        var results = [];
-
-        contacts.forEach(function (c) {
-            var contactInfo = c.name + ': ' + c.phones.join(', ');
-            results.push(contactInfo);
-        });
-
-        return results;
-    }
-
-    if (command.search(/REMOVE_PHONE /) > -1) {
-        var phoneNumber = args[1];
-        var found = false;
-        for (var key in phoneBook) {
-            var phonePosition = phoneBook[key].indexOf(phoneNumber);
-            if (phonePosition > -1) {
-                phoneBook[key].splice(phonePosition, 1);
-                return true;
+            if ('hours'.match(new RegExp(unit))) {
+                var hours = dateTime.getHours();
+                dateTime.setHours(hours + amount);
+                this.value = func(dateTime);
+                return this;
             }
-        }
-        return found;
-    }
+            if ('days'.match(new RegExp(unit))) {
+                hours = dateTime.getHours();
+                dateTime.setHours(hours + 24 * amount);
+                this.value = func(dateTime);
+                return this;
+            }
+            if ('months'.match(new RegExp(unit))) {
+                var months = dateTime.getMonth();
+                dateTime.setMonth(months + amount);
+                this.value = func(dateTime);
+                return this;
+            }
+            if ('years'.match(new RegExp(unit))) {
+                var years = dateTime.getUTCFullYear();
+                dateTime.setUTCFullYear(years + amount);
+                this.value = func(dateTime);
+                return this;
+            } else {
+                throw new TypeError();
+            }
 
-}
+        }
+        ,
+        subtract: function (amount, unit) {
+            if (amount < 0) throw new TypeError();
+            if ('minutes'.match(new RegExp(unit))) {
+                var mins = dateTime.getMinutes();
+                dateTime.setMinutes(mins - amount);
+                this.value = func(dateTime);
+                return this;
+            }
+            if ('hours'.match(new RegExp(unit))) {
+                var hours = dateTime.getHours();
+                dateTime.setUTCHours(hours - amount);
+                this.value = func(dateTime);
+                return this;
+            }
+            if ('days'.match(new RegExp(unit))) {
+                hours = dateTime.getHours();
+                dateTime.setUTCHours(hours - 24 * amount);
+                this.value = func(dateTime);
+                return this;
+            }
+            if ('months'.match(new RegExp(unit))) {
+                var months = dateTime.getMonth();
+                dateTime.setMonth(months - amount);
+                this.value = func(dateTime);
+                return this;
+            }
+            if ('years'.match(new RegExp(unit))) {
+                var years = dateTime.getUTCFullYear();
+                dateTime.setUTCFullYear(years - amount);
+                this.value = func(dateTime);
+                return this;
+            } else {
+                throw new TypeError();
+            }
+
+        }
+    };
+    return date;
+};
